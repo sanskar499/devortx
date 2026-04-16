@@ -1,7 +1,7 @@
 class MockState {
   constructor() {
-    this.reports = [];
-    this.userScore = 0;
+    this.reports = JSON.parse(localStorage.getItem('resiligen_reports')) || [];
+    this.userScore = parseInt(localStorage.getItem('resiligen_score')) || 0;
     this.listeners = [];
     this.currentUserRole = 'citizen';
   }
@@ -11,6 +11,8 @@ class MockState {
   }
 
   notify() {
+    localStorage.setItem('resiligen_reports', JSON.stringify(this.reports));
+    localStorage.setItem('resiligen_score', this.userScore.toString());
     this.listeners.forEach(l => l(this));
   }
 
