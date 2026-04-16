@@ -5,9 +5,8 @@ let mapInstance = null;
 const markers = {};
 
 export function initRiskMap(containerElem) {
-  // Center roughly on a typical vulnerable city area (e.g., Jakarta roughly or just a generic bounds)
-  // Let's use a generic point, say somewhere in Florida or just London
-  mapInstance = L.map(containerElem).setView([51.505, -0.09], 13);
+  // Start with a global view so the user isn't locked to London while waiting for GPS 
+  mapInstance = L.map(containerElem).setView([20, 0], 2);
 
   // Dark modern tiles
   L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
@@ -16,16 +15,35 @@ export function initRiskMap(containerElem) {
     maxZoom: 20
   }).addTo(mapInstance);
 
-  // Add mock initial layers (Inundation zones)
-  const inundationStyle = { color: '#06b6d4', weight: 2, fillOpacity: 0.2 };
-  L.polygon([
-    [51.509, -0.08],
-    [51.503, -0.06],
-    [51.51, -0.047]
-  ], inundationStyle).addTo(mapInstance).bindPopup("<b>High Risk Inundation Zone</b><br>AI Prediction: 89% confidence.");
-
   // Listen to state changes to add approved reports
   state.subscribe(renderMarkers);
+
+  // REAL-TIME GPS TRACKING:
+  // Ask for location and continually watch the user's position
+  mapInstance.locate({ setView: false, watch: true, maxZoom: 16, enableHighAccuracy: true });
+
+  let userMarker = null;
+
+  mapInstance.on('locationfound', (e) => {
+    if (!userMarker) {
+      // Create a glowing blue dot for user location
+      const userIcon = L.divIcon({
+        className: 'custom-icon',
+        html: `<div style="background-color: var(--accent-blue); width: 14px; height: 14px; border-radius: 50%; box-shadow: 0 0 12px var(--accent-blue); border: 2px solid #fff;"></div>`
+      });
+      userMarker = L.marker(e.latlng, { icon: userIcon, zIndexOffset: 1000 }).addTo(mapInstance);
+      userMarker.bindPopup("<b>You are here</b> (Live GPS)").openPopup();
+      
+      // Optionally fly to user location on first fix
+      mapInstance.flyTo(e.latlng, 15);
+    } else {
+      userMarker.setLatLng(e.latlng);
+    }
+  });
+
+  mapInstance.on('locationerror', (e) => {
+    console.warn("Real-time GPS access denied or unavailable: " + e.message);
+  });
 }
 
 function renderMarkers(currentState) {
