@@ -66,9 +66,13 @@ export function setupSubmissionForm(container) {
       },
       (error) => {
         console.error("Error getting location: ", error);
-        locInput.value = "Failed to access GPS. Please ensure permissions are granted.";
+        if (window.isSecureContext === false) {
+           locInput.value = "GPS requires HTTPS (or localhost) to work.";
+        } else {
+           locInput.value = "Failed to access GPS. Check permissions/timeout.";
+        }
       },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+      { enableHighAccuracy: false, timeout: 15000, maximumAge: 10000 }
     );
   });
 

@@ -20,7 +20,7 @@ export function initRiskMap(containerElem) {
 
   // REAL-TIME GPS TRACKING:
   // Ask for location and continually watch the user's position
-  mapInstance.locate({ setView: false, watch: true, maxZoom: 16, enableHighAccuracy: true });
+  mapInstance.locate({ setView: false, watch: true, maxZoom: 16, enableHighAccuracy: false, timeout: 15000 });
 
   let userMarker = null;
 
