@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Resiligen | Urban Flood Network</title>
+    <link rel="stylesheet" href="style.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
+  </head>
+  <body>
+    <div id="app" class="app-container">
+      <nav class="sidebar">
+        <div class="logo">
+          <span class="icon">🌊</span>
+          <h1>Resiligen</h1>
+        </div>
+        <ul class="nav-links">
+          <li class="active" data-view="map-view"><span class="icon">🌍</span> Live Map</li>
+          <li data-view="submit-view"><span class="icon">📸</span> Report Risk</li>
+          <li data-view="moderator-view"><span class="icon">🛡️</span> Moderator Queue <span id="queue-badge" class="badge hidden">0</span></li>
+        </ul>
+        <div class="blockchain-status" id="wallet-status">
+          <span class="status-dot"></span>
+          <span>Ledger Connected</span>
+          <div class="reputation-score" id="user-reputation">Rep: 0 XP</div>
+        </div>
+      </nav>
+
+      <main class="content-area">
+        <!-- Dashboard/Map View -->
+        <section id="map-view" class="view-section active">
+          <header class="section-header">
+            <h2>Live Urban Risk Map</h2>
+            <p>Real-time crowdsourced & AI-verified flood risk zones.</p>
+          </header>
+          <div class="map-container" id="map"></div>
+          <div class="legend glass-panel">
+            <h4>Legend</h4>
+            <ul>
+              <li><span class="color-box bg-verified"></span> Verified Report</li>
+              <li><span class="color-box bg-hazard"></span> Blocked Corridor</li>
+              <li><span class="color-box bg-inundation"></span> Inundation Zone</li>
+            </ul>
+          </div>
+        </section>
+
+        <!-- Citizen Submit View -->
+        <section id="submit-view" class="view-section hidden">
+          <header class="section-header">
+            <h2>Report an Incident</h2>
+            <p>Submit multimedia evidence. Our AI checks relevance & location.</p>
+          </header>
+          <div class="form-container glass-panel" id="submission-form-container">
+            <!-- Form injected by SubmissionForm component -->
+          </div>
+        </section>
+
+        <!-- Moderator Queue View -->
+        <section id="moderator-view" class="view-section hidden">
+          <header class="section-header">
+            <h2>Validation Task Queue</h2>
+            <p>Review AI-triaged reports before appending to the blockchain ledger.</p>
+          </header>
+          <div class="queue-container" id="moderator-queue-container">
+            <!-- Cards injected by ModeratorQueue component -->
+          </div>
+        </section>
+      </main>
+    </div>
+    
+    <!-- Notification Toast -->
+    <div id="toast" class="toast hidden"></div>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
