@@ -1,12 +1,37 @@
 import { initRiskMap } from './components/RiskMap.js';
 import { setupSubmissionForm } from './components/SubmissionForm.js';
 import { setupModeratorQueue } from './components/ModeratorQueue.js';
+import { setupMyReports } from './components/MyReports.js';
 import { state } from './services/MockState.js';
 
 document.addEventListener('DOMContentLoaded', () => {
   // Navigation handling
   const navLinks = document.querySelectorAll('.nav-links li');
   const sections = document.querySelectorAll('.view-section');
+
+  // Role Selection Logic
+  const roleModal = document.getElementById('role-modal');
+  const appContainer = document.getElementById('app');
+
+  function setRole(role) {
+    state.currentUserRole = role;
+    roleModal.style.display = 'none';
+    appContainer.style.display = 'flex';
+    
+    // Hide nav items not meant for this role
+    navLinks.forEach(li => {
+      const allowed = li.getAttribute('data-role');
+      if (allowed !== 'all' && allowed !== role) {
+        li.style.display = 'none';
+      }
+    });
+
+    // Reset active view based on role
+    document.querySelector('.nav-links li[data-view="map-view"]').click();
+  }
+
+  document.getElementById('btn-role-citizen').addEventListener('click', () => setRole('citizen'));
+  document.getElementById('btn-role-admin').addEventListener('click', () => setRole('admin'));
 
   navLinks.forEach(link => {
     link.addEventListener('click', () => {
@@ -37,6 +62,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initRiskMap(document.getElementById('map'));
   setupSubmissionForm(document.getElementById('submission-form-container'));
   setupModeratorQueue(document.getElementById('moderator-queue-container'));
+  setupMyReports(document.getElementById('my-reports-container'));
 
   // Subscribe to state changes to update the queue badge
   state.subscribe(() => {

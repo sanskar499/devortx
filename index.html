@@ -12,16 +12,29 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
   </head>
   <body>
-    <div id="app" class="app-container">
+    <!-- Role Selection Modal -->
+    <div id="role-modal" class="modal-overlay">
+      <div class="modal-content glass-panel">
+        <h2>Welcome to Resiligen</h2>
+        <p>Please select your login role to continue:</p>
+        <div class="role-buttons">
+          <button class="btn btn-primary" id="btn-role-citizen">Continue as Citizen</button>
+          <button class="btn btn-hazard" id="btn-role-admin">Continue as Administrator</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="app" class="app-container" style="display:none;">
       <nav class="sidebar">
         <div class="logo">
           <span class="icon">🌊</span>
           <h1>Resiligen</h1>
         </div>
         <ul class="nav-links">
-          <li class="active" data-view="map-view"><span class="icon">🌍</span> Live Map</li>
-          <li data-view="submit-view"><span class="icon">📸</span> Report Risk</li>
-          <li data-view="moderator-view"><span class="icon">🛡️</span> Moderator Queue <span id="queue-badge" class="badge hidden">0</span></li>
+          <li class="active" data-view="map-view" data-role="all"><span class="icon">🌍</span> Live Map</li>
+          <li data-view="submit-view" data-role="citizen"><span class="icon">📸</span> Report Risk</li>
+          <li data-view="my-reports-view" data-role="citizen"><span class="icon">📋</span> My Reports</li>
+          <li data-view="moderator-view" data-role="admin"><span class="icon">🛡️</span> Moderator Queue <span id="queue-badge" class="badge hidden">0</span></li>
         </ul>
         <div class="blockchain-status" id="wallet-status">
           <span class="status-dot"></span>
@@ -56,6 +69,17 @@
           </header>
           <div class="form-container glass-panel" id="submission-form-container">
             <!-- Form injected by SubmissionForm component -->
+          </div>
+        </section>
+
+        <!-- Citizen My Reports View -->
+        <section id="my-reports-view" class="view-section hidden">
+          <header class="section-header">
+            <h2>My Pending Reports</h2>
+            <p>Track the validation status of incidents you've submitted.</p>
+          </header>
+          <div class="queue-container" id="my-reports-container">
+            <!-- Cards injected by MyReports component -->
           </div>
         </section>
 

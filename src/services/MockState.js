@@ -3,6 +3,7 @@ class MockState {
     this.reports = [];
     this.userScore = 0;
     this.listeners = [];
+    this.currentUserRole = 'citizen';
   }
 
   subscribe(listener) {
@@ -18,12 +19,17 @@ class MockState {
     report.id = 'rpt_' + Math.random().toString(36).substr(2, 9);
     report.status = 'pending';
     report.timestamp = new Date().toISOString();
+    report.ownerId = 'current_user';
     this.reports.push(report);
     this.notify();
   }
 
   getPendingReports() {
     return this.reports.filter(r => r.status === 'pending');
+  }
+
+  getUserReports() {
+    return this.reports.filter(r => r.ownerId === 'current_user');
   }
 
   getApprovedReports() {
