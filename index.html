@@ -12,14 +12,44 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
   </head>
   <body>
-    <!-- Role Selection Modal -->
-    <div id="role-modal" class="modal-overlay">
-      <div class="modal-content glass-panel">
-        <h2>Welcome to Resiligen</h2>
-        <p>Please select your login role to continue:</p>
-        <div class="role-buttons">
-          <button class="btn btn-primary" id="btn-role-citizen">Continue as Citizen</button>
-          <button class="btn btn-hazard" id="btn-role-admin">Continue as Administrator</button>
+    <!-- Premium Authentication Screen -->
+    <div id="auth-screen" class="auth-wrapper">
+      <div class="auth-bg-gradient"></div>
+      <div class="auth-container">
+        <header class="auth-header">
+            <span class="auth-logo-icon">🌊</span>
+            <h1>Resiligen</h1>
+            <p>Urban Flood Resilience Network</p>
+        </header>
+
+        <div class="auth-cards">
+            <!-- Citizen Card -->
+            <div class="auth-card glass-panel" id="card-citizen">
+                <div class="card-icon">👥</div>
+                <h3>Citizen Scientist</h3>
+                <p>Report flood risks, upload evidence, and help secure your community.</p>
+                <button class="btn btn-primary" id="btn-role-citizen">Continue as Citizen</button>
+            </div>
+
+            <!-- Admin Card -->
+            <div class="auth-card glass-panel" id="card-admin">
+                <div class="card-icon">🛰️</div>
+                <h3>Network Admin</h3>
+                <p>Verify AI triaged reports, monitor telemetry, and manage the ledger.</p>
+                
+                <div id="admin-login-form" class="hidden auth-form">
+                    <div class="form-group">
+                        <input type="text" id="admin-id" class="form-control" placeholder="Admin ID">
+                    </div>
+                    <div class="form-group">
+                        <input type="password" id="admin-pass" class="form-control" placeholder="Password">
+                    </div>
+                    <button class="btn btn-hazard" id="btn-admin-login">Login to Command Center</button>
+                    <button class="btn-link" id="btn-back-to-roles">Back</button>
+                </div>
+                
+                <button class="btn btn-hazard" id="btn-role-admin">Administrator Login</button>
+            </div>
         </div>
       </div>
     </div>
@@ -32,10 +62,14 @@
         </div>
         <ul class="nav-links">
           <li class="active" data-view="map-view" data-role="all"><span class="icon">🌍</span> Live Map</li>
+          <li data-view="command-view" data-role="admin"><span class="icon">🛰️</span> Command Center</li>
           <li data-view="submit-view" data-role="citizen"><span class="icon">📸</span> Report Risk</li>
           <li data-view="my-reports-view" data-role="citizen"><span class="icon">📋</span> My Reports</li>
           <li data-view="moderator-view" data-role="admin"><span class="icon">🛡️</span> Moderator Queue <span id="queue-badge" class="badge hidden">0</span></li>
         </ul>
+        <div class="system-log-container" id="system-log">
+            <!-- SystemLog.js -->
+        </div>
         <div class="blockchain-status" id="wallet-status">
           <span class="status-dot"></span>
           <span>Ledger Connected</span>
@@ -47,8 +81,13 @@
         <!-- Dashboard/Map View -->
         <section id="map-view" class="view-section active">
           <header class="section-header">
-            <h2>Live Urban Risk Map</h2>
-            <p>Real-time crowdsourced & AI-verified flood risk zones.</p>
+            <div class="header-content">
+                <h2>Live Urban Risk Map</h2>
+                <p>Real-time crowdsourced & AI-verified flood risk zones.</p>
+            </div>
+            <div class="header-actions">
+                <button id="run-sim-btn" class="btn btn-hazard">Run Prediction Sim</button>
+            </div>
           </header>
           <div class="map-container" id="map"></div>
           <div class="legend glass-panel">
@@ -56,8 +95,19 @@
             <ul>
               <li><span class="color-box bg-verified"></span> Verified Report</li>
               <li><span class="color-box bg-hazard"></span> Blocked Corridor</li>
-              <li><span class="color-box bg-inundation"></span> Inundation Zone</li>
+              <li><span class="color-box bg-inundation"></span> Simulation Overlay</li>
             </ul>
+          </div>
+        </section>
+
+        <!-- Command Center View -->
+        <section id="command-view" class="view-section hidden">
+          <header class="section-header">
+            <h2>Operations Command Center</h2>
+            <p>High-fidelity telemetry from urban sensor network and satellite triage.</p>
+          </header>
+          <div id="telemetry-container">
+              <!-- Telemetry.js -->
           </div>
         </section>
 

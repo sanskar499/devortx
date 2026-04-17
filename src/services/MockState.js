@@ -2,8 +2,16 @@ class MockState {
   constructor() {
     this.reports = JSON.parse(localStorage.getItem('resiligen_reports')) || [];
     this.userScore = parseInt(localStorage.getItem('resiligen_score')) || 0;
+    this.logs = [];
+    this.telemetry = {
+      rainfall: [],
+      riskLevel: []
+    };
     this.listeners = [];
     this.currentUserRole = 'citizen';
+    
+    // Start background simulation of telemetry
+    this._startSimulation();
   }
 
   subscribe(listener) {
@@ -16,13 +24,24 @@ class MockState {
     this.listeners.forEach(l => l(this));
   }
 
+  addLog(message, type = 'info') {
+    this.logs.unshift({
+      id: Math.random().toString(36).substr(2, 5),
+      timestamp: new Date().toLocaleTimeString(),
+      message,
+      type
+    });
+    if (this.logs.length > 50) this.logs.pop();
+    this.notify();
+  }
+
   addReport(report) {
-    // Generate an ID
     report.id = 'rpt_' + Math.random().toString(36).substr(2, 9);
     report.status = 'pending';
     report.timestamp = new Date().toISOString();
     report.ownerId = 'current_user';
     this.reports.push(report);
+    this.addLog(`New report submitted: ${report.id.substring(0, 8)}...`, 'warning');
     this.notify();
   }
 
@@ -42,6 +61,7 @@ class MockState {
     const r = this.reports.find(r => r.id === id);
     if (r) {
       r.status = 'approved';
+      this.addLog(`Report ${id.substring(0, 8)} approved and appended to ledger.`, 'success');
       this.notify();
     }
     return r;
@@ -51,6 +71,7 @@ class MockState {
     const r = this.reports.find(r => r.id === id);
     if (r) {
       r.status = 'rejected';
+      this.addLog(`Report ${id.substring(0, 8)} rejected by consensus.`, 'danger');
       this.notify();
     }
   }
@@ -62,6 +83,28 @@ class MockState {
 
   getUserScore() {
     return this.userScore;
+  }
+
+  _startSimulation() {
+    setInterval(() => {
+      const now = new Date().toLocaleTimeString();
+      const rain = Math.random() * 5 + 2;
+      const risk = (rain * 1.5) + (this.getApprovedReports().length * 2) + (Math.random() * 5);
+      
+      this.telemetry.rainfall.push({ x: now, y: rain });
+      this.telemetry.riskLevel.push({ x: now, y: risk });
+      
+      if (this.telemetry.rainfall.length > 20) {
+        this.telemetry.rainfall.shift();
+        this.telemetry.riskLevel.shift();
+      }
+      
+      if (Math.random() > 0.8) {
+        this.addLog(`AI Model verifying block ${Math.floor(Math.random() * 10000)}...`, 'info');
+      }
+      
+      this.notify();
+    }, 3000);
   }
 }
 

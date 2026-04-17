@@ -12,6 +12,8 @@
     "vite": "^5.0.0"
   },
   "dependencies": {
-    "leaflet": "^1.9.4"
+    "chart.js": "^4.5.1",
+    "leaflet": "^1.9.4",
+    "leaflet-heatmap": "^1.0.0"
   }
 }

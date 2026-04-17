@@ -2,60 +2,79 @@ import { state } from '../services/MockState.js';
 import { mintContribution } from '../services/blockchain.js';
 
 export function setupModeratorQueue(container) {
-  let boundContainer = container;
+  if (!container) return;
   
-  state.subscribe((s) => renderCards(s, boundContainer));
-  renderCards(state, boundContainer);
-}
+  const render = () => {
+    const pending = state.getPendingReports();
+    
+    if (pending.length === 0) {
+      container.innerHTML = `
+        <div class="empty-state glass-panel">
+            <span class="icon">✅</span>
+            <p>The queue is empty. All safe!</p>
+        </div>
+      `;
+      return;
+    }
 
-function renderCards(currentState, container) {
-  const pending = currentState.getPendingReports();
-  
-  if (pending.length === 0) {
-    container.innerHTML = `<p style="color:var(--text-secondary)">The queue is empty. All safe!</p>`;
-    return;
+    container.innerHTML = pending.map(report => {
+      const isHighRisk = report.aiAnalysis.confidence > 80;
+      return `
+        <div class="queue-card glass-panel ${isHighRisk ? 'verified' : ''}">
+          <div class="card-header">
+            <span class="ai-score">AI Match: ${report.aiAnalysis.confidence.toFixed(1)}%</span>
+            <small>${new Date(report.timestamp).toLocaleTimeString()}</small>
+          </div>
+          <div class="card-body">
+            <p><strong>Incident:</strong> "${report.description}"</p>
+            <div class="card-meta">
+                <span class="tag">${report.aiAnalysis.inferredTags.join('</span> <span class="tag">')}</span>
+            </div>
+            <div class="ai-insight">
+               🤖 <i>${report.aiAnalysis.analysis}</i>
+            </div>
+          </div>
+          <div class="card-actions">
+            <button class="btn btn-success action-btn" data-id="${report.id}" data-action="approve">✓ Approve</button>
+            <button class="btn btn-danger action-btn" data-id="${report.id}" data-action="reject">✗ Drop</button>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    // Re-attach listeners after each render
+    container.querySelectorAll('.action-btn').forEach(btn => {
+      btn.addEventListener('click', handleAction);
+    });
+  };
+
+  async function handleAction(e) {
+    const btn = e.target;
+    const id = btn.getAttribute('data-id');
+    const action = btn.getAttribute('data-action');
+    const card = btn.closest('.queue-card');
+    
+    card.style.pointerEvents = 'none';
+    card.style.opacity = '0.5';
+    btn.textContent = 'Processing...';
+
+    if (action === 'approve') {
+      const approvedRep = state.approveReport(id);
+      try {
+          const receipt = await mintContribution(approvedRep);
+          state.addScore(receipt.rewardXP);
+          window.showToast(`Report Approved. Block Anchored. (+${receipt.rewardXP} XP)`, 'success');
+      } catch (err) {
+          window.showToast("Ledger sync interrupted. Retrying...", "warning");
+      }
+    } else {
+      state.rejectReport(id);
+      window.showToast("Report rejected.", "info");
+    }
+    
+    // State notify will trigger re-render
   }
 
-  container.innerHTML = pending.map(report => `
-    <div class="queue-card glass-panel">
-      <div class="card-header">
-        <span class="ai-score" title="AI Confidence Score">AI Match: ${report.aiAnalysis.confidence.toFixed(1)}%</span>
-        <small style="color:var(--text-secondary)">${new Date(report.timestamp).toLocaleTimeString()}</small>
-      </div>
-      <div class="card-body">
-        <p><strong>Desc:</strong> "${report.description}"</p>
-        <p style="margin-top:0.5rem; color:var(--hazard-orange)"><strong>AI Inferred:</strong> ${report.aiAnalysis.inferredTags.join(', ')}</p>
-        <p style="margin-top:0.5rem; font-size:0.85rem; padding:0.5rem; background:rgba(0,0,0,0.2); border-radius:4px;">
-           🤖 <i>${report.aiAnalysis.analysis}</i>
-        </p>
-      </div>
-      <div class="card-actions">
-        <button class="btn btn-success action-btn" data-id="${report.id}" data-action="approve">✓ Validate</button>
-        <button class="btn btn-danger action-btn" data-id="${report.id}" data-action="reject">✗ Reject</button>
-      </div>
-    </div>
-  `).join('');
-
-  // Attach event listeners
-  const buttons = container.querySelectorAll('.action-btn');
-  buttons.forEach(btn => {
-    btn.addEventListener('click', async (e) => {
-      const id = e.target.getAttribute('data-id');
-      const action = e.target.getAttribute('data-action');
-      
-      // Update UI optimistically
-      e.target.parentElement.parentElement.style.opacity = '0.5';
-      e.target.parentElement.innerHTML = 'Processing block...';
-
-      if (action === 'approve') {
-        const approvedRep = state.approveReport(id);
-        const receipt = await mintContribution(approvedRep);
-        state.addScore(receipt.rewardXP);
-        window.showToast(`Report Anchored. Tx: ${receipt.txHash.substring(0,8)}... (+${receipt.rewardXP} XP)`, 'success');
-      } else {
-        state.rejectReport(id);
-        window.showToast(`Report dropped as noise.`, '');
-      }
-    });
-  });
+  state.subscribe(render);
+  render();
 }
