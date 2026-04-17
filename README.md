@@ -1,4 +1,4 @@
-Resiligence
+🌊Resiligence
 
 Resiligence is a smart and scalable platform built to enhance urban resilience through technology-driven disaster management, real-time monitoring, and data-driven decision-making.
 
