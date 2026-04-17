@@ -21,9 +21,14 @@ export class FloodSim {
         // Initialize cells from trigger points (approved reports)
         points.forEach(p => {
             const key = this._getPosKey(p.lat, p.lng);
-            // Randomly choose a road axis for this seed point: 'lat-axis' (V) or 'lng-axis' (H)
+            // Randomly choose a road axis for this seed point
             const axis = Math.random() > 0.5 ? 'lat' : 'lng';
-            this.cells.set(key, { lat: p.lat, lng: p.lng, level: 1.0, axis });
+            // Store origin to manage area-based capping
+            this.cells.set(key, { 
+                lat: p.lat, lng: p.lng, 
+                level: 1.0, axis, 
+                origin: { lat: p.lat, lng: p.lng } 
+            });
         });
 
         if (!this.layer) {
@@ -48,47 +53,56 @@ export class FloodSim {
     }
 
     _loop() {
-        if (!this.active || this.iteration > 30) return;
+        // Cap iterations to keep simulation localized
+        if (!this.active || this.iteration > 25) return;
         
         this.iteration++;
         const nextCells = new Map(this.cells);
+        const MAX_SPREAD_DEG = 0.02; // Approx 2.2km capping
 
         // Spread logic
         this.cells.forEach((cell, key) => {
-            if (cell.level < 0.1) return;
+            if (cell.level < 0.15) return;
 
-            // Neighbors: Primary axis gets full spread, perpendicular gets minimal or none
             const neighbors = [];
-            
             if (cell.axis === 'lat') {
-                // Vertical Road
                 neighbors.push({ lat: cell.lat + this.gridSize, lng: cell.lng, axis: 'lat' });
                 neighbors.push({ lat: cell.lat - this.gridSize, lng: cell.lng, axis: 'lat' });
             } else {
-                // Horizontal Road
                 neighbors.push({ lat: cell.lat, lng: cell.lng + this.gridSize, axis: 'lng' });
                 neighbors.push({ lat: cell.lat, lng: cell.lng - this.gridSize, axis: 'lng' });
             }
 
             neighbors.forEach(n => {
-                const nKey = this._getPosKey(n.lat, n.lng);
-                const current = nextCells.get(nKey) || { lat: n.lat, lng: n.lng, level: 0, axis: n.axis };
+                // Distance capping logic
+                const distLat = Math.abs(n.lat - cell.origin.lat);
+                const distLng = Math.abs(n.lng - cell.origin.lng);
                 
-                // Spread water
-                const flow = cell.level * 0.6;
+                if (distLat > MAX_SPREAD_DEG || distLng > MAX_SPREAD_DEG) return;
+
+                const nKey = this._getPosKey(n.lat, n.lng);
+                const current = nextCells.get(nKey) || { 
+                    lat: n.lat, lng: n.lng, 
+                    level: 0, 
+                    axis: n.axis, 
+                    origin: cell.origin 
+                };
+                
+                // Spread water with decay
+                const flow = cell.level * (0.55 - (this.iteration * 0.01));
                 current.level = Math.min(1.0, current.level + flow);
                 nextCells.set(nKey, current);
             });
 
-            // Source remains strong but drifts slightly less
-            cell.level *= 0.9;
+            // Evaporation / Saturation decay
+            cell.level *= 0.85;
             nextCells.set(key, cell);
         });
 
         this.cells = nextCells;
         this._render();
         
-        this.timer = setTimeout(() => this._loop(), 500); // Faster iteration for demo
+        this.timer = setTimeout(() => this._loop(), 400); 
     }
 
     _render() {
@@ -96,18 +110,17 @@ export class FloodSim {
         this.layer.clearLayers();
 
         this.cells.forEach(cell => {
-            if (cell.level < 0.1) return;
+            if (cell.level < 0.15) return;
 
-            const bounds = [
-                [cell.lat - this.gridSize/1.8, cell.lng - this.gridSize/1.8],
-                [cell.lat + this.gridSize/1.8, cell.lng + this.gridSize/1.8]
-            ];
+            // Use circular heat-map type rendering
+            const color = cell.level > 0.8 ? '#06b6d4' : '#3b82f6';
+            const radius = (this.gridSize * 150000) * (cell.level * 0.9); // Dynamic visual radius
 
-            L.rectangle(bounds, {
-                color: 'var(--accent-cyan)',
-                weight: 0.5,
-                fillColor: 'var(--accent-cyan)',
-                fillOpacity: cell.level * 0.6,
+            L.circle([cell.lat, cell.lng], {
+                radius: radius,
+                stroke: false,
+                fillColor: color,
+                fillOpacity: cell.level * 0.35,
                 interactive: false
             }).addTo(this.layer);
         });
