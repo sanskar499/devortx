@@ -1,11 +1,11 @@
 /**
- * Flood Simulation Logic (Cellular Automata)
- * Simulates water spread based on a grit system relative to Leaflet coordinates.
+ * Flood Simulation Logic (Linear/Road Spread)
+ * Simulates water following a random road axis (H or V) from seed points.
  */
 export class FloodSim {
     constructor(mapInstance) {
         this.map = mapInstance;
-        this.gridSize = 0.005; // ~500m scale
+        this.gridSize = 0.0008; // High precision (~80m)
         this.cells = new Map();
         this.active = false;
         this.iteration = 0;
@@ -21,7 +21,9 @@ export class FloodSim {
         // Initialize cells from trigger points (approved reports)
         points.forEach(p => {
             const key = this._getPosKey(p.lat, p.lng);
-            this.cells.set(key, { lat: p.lat, lng: p.lng, level: 1.0 });
+            // Randomly choose a road axis for this seed point: 'lat-axis' (V) or 'lng-axis' (H)
+            const axis = Math.random() > 0.5 ? 'lat' : 'lng';
+            this.cells.set(key, { lat: p.lat, lng: p.lng, level: 1.0, axis });
         });
 
         if (!this.layer) {
@@ -42,11 +44,11 @@ export class FloodSim {
     _getPosKey(lat, lng) {
         const rLat = Math.round(lat / this.gridSize) * this.gridSize;
         const rLng = Math.round(lng / this.gridSize) * this.gridSize;
-        return `${rLat.toFixed(4)},${rLng.toFixed(4)}`;
+        return `${rLat.toFixed(5)},${rLng.toFixed(5)}`;
     }
 
     _loop() {
-        if (!this.active || this.iteration > 20) return;
+        if (!this.active || this.iteration > 30) return;
         
         this.iteration++;
         const nextCells = new Map(this.cells);
@@ -55,32 +57,38 @@ export class FloodSim {
         this.cells.forEach((cell, key) => {
             if (cell.level < 0.1) return;
 
-            const neighbors = [
-                { lat: cell.lat + this.gridSize, lng: cell.lng },
-                { lat: cell.lat - this.gridSize, lng: cell.lng },
-                { lat: cell.lat, lng: cell.lng + this.gridSize },
-                { lat: cell.lat, lng: cell.lng - this.gridSize }
-            ];
+            // Neighbors: Primary axis gets full spread, perpendicular gets minimal or none
+            const neighbors = [];
+            
+            if (cell.axis === 'lat') {
+                // Vertical Road
+                neighbors.push({ lat: cell.lat + this.gridSize, lng: cell.lng, axis: 'lat' });
+                neighbors.push({ lat: cell.lat - this.gridSize, lng: cell.lng, axis: 'lat' });
+            } else {
+                // Horizontal Road
+                neighbors.push({ lat: cell.lat, lng: cell.lng + this.gridSize, axis: 'lng' });
+                neighbors.push({ lat: cell.lat, lng: cell.lng - this.gridSize, axis: 'lng' });
+            }
 
             neighbors.forEach(n => {
                 const nKey = this._getPosKey(n.lat, n.lng);
-                const current = nextCells.get(nKey) || { lat: n.lat, lng: n.lng, level: 0 };
+                const current = nextCells.get(nKey) || { lat: n.lat, lng: n.lng, level: 0, axis: n.axis };
                 
                 // Spread water
-                const flow = cell.level * 0.4;
+                const flow = cell.level * 0.6;
                 current.level = Math.min(1.0, current.level + flow);
                 nextCells.set(nKey, current);
             });
 
-            // Dissipate source a bit
-            cell.level *= 0.8;
+            // Source remains strong but drifts slightly less
+            cell.level *= 0.9;
             nextCells.set(key, cell);
         });
 
         this.cells = nextCells;
         this._render();
         
-        this.timer = setTimeout(() => this._loop(), 1000);
+        this.timer = setTimeout(() => this._loop(), 500); // Faster iteration for demo
     }
 
     _render() {
@@ -88,18 +96,18 @@ export class FloodSim {
         this.layer.clearLayers();
 
         this.cells.forEach(cell => {
-            if (cell.level < 0.05) return;
+            if (cell.level < 0.1) return;
 
             const bounds = [
-                [cell.lat - this.gridSize/2, cell.lng - this.gridSize/2],
-                [cell.lat + this.gridSize/2, cell.lng + this.gridSize/2]
+                [cell.lat - this.gridSize/1.8, cell.lng - this.gridSize/1.8],
+                [cell.lat + this.gridSize/1.8, cell.lng + this.gridSize/1.8]
             ];
 
             L.rectangle(bounds, {
                 color: 'var(--accent-cyan)',
-                weight: 0,
+                weight: 0.5,
                 fillColor: 'var(--accent-cyan)',
-                fillOpacity: cell.level * 0.4,
+                fillOpacity: cell.level * 0.6,
                 interactive: false
             }).addTo(this.layer);
         });

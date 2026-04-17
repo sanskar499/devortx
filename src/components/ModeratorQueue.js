@@ -6,8 +6,9 @@ export function setupModeratorQueue(container) {
   
   const render = () => {
     const pending = state.getPendingReports();
+    const needsUpdate = state.reports.filter(r => r.requiresUpdate && !r.updateRequested);
     
-    if (pending.length === 0) {
+    if (pending.length === 0 && needsUpdate.length === 0) {
       container.innerHTML = `
         <div class="empty-state glass-panel">
             <span class="icon">✅</span>
@@ -17,32 +18,39 @@ export function setupModeratorQueue(container) {
       return;
     }
 
-    container.innerHTML = pending.map(report => {
-      const isHighRisk = report.aiAnalysis.confidence > 80;
+    const items = [...pending, ...needsUpdate];
+
+    container.innerHTML = items.map(report => {
+      const isHighRisk = report.aiAnalysis && report.aiAnalysis.confidence > 80;
+      const isStale = report.requiresUpdate;
+      
       return `
-        <div class="queue-card glass-panel ${isHighRisk ? 'verified' : ''}">
+        <div class="queue-card glass-panel ${isHighRisk ? 'verified' : ''} ${isStale ? 'stale' : ''}">
           <div class="card-header">
-            <span class="ai-score">AI Match: ${report.aiAnalysis.confidence.toFixed(1)}%</span>
+            ${isStale ? '<span class="status-badge stale-badge">⚠️ UPDATE NEEDED (2H+)</span>' : `<span class="ai-score">AI Match: ${report.aiAnalysis.confidence.toFixed(1)}%</span>`}
             <small>${new Date(report.timestamp).toLocaleTimeString()}</small>
           </div>
           <div class="card-body">
             <p><strong>Incident:</strong> "${report.description}"</p>
             <div class="card-meta">
-                <span class="tag">${report.aiAnalysis.inferredTags.join('</span> <span class="tag">')}</span>
+                ${report.aiAnalysis ? `<span class="tag">${report.aiAnalysis.inferredTags.join('</span> <span class="tag">')}</span>` : ''}
             </div>
+            ${report.aiAnalysis ? `
             <div class="ai-insight">
                🤖 <i>${report.aiAnalysis.analysis}</i>
-            </div>
+            </div>` : ''}
           </div>
           <div class="card-actions">
-            <button class="btn btn-success action-btn" data-id="${report.id}" data-action="approve">✓ Approve</button>
-            <button class="btn btn-danger action-btn" data-id="${report.id}" data-action="reject">✗ Drop</button>
+            ${isStale ? 
+                `<button class="btn btn-primary action-btn" data-id="${report.id}" data-action="request-update">Request Citizen Update</button>` :
+                `<button class="btn btn-success action-btn" data-id="${report.id}" data-action="approve">✓ Approve</button>
+                 <button class="btn btn-danger action-btn" data-id="${report.id}" data-action="reject">✗ Drop</button>`
+            }
           </div>
         </div>
       `;
     }).join('');
 
-    // Re-attach listeners after each render
     container.querySelectorAll('.action-btn').forEach(btn => {
       btn.addEventListener('click', handleAction);
     });
@@ -56,23 +64,24 @@ export function setupModeratorQueue(container) {
     
     card.style.pointerEvents = 'none';
     card.style.opacity = '0.5';
-    btn.textContent = 'Processing...';
+    btn.textContent = 'Syncing...';
 
     if (action === 'approve') {
       const approvedRep = state.approveReport(id);
       try {
           const receipt = await mintContribution(approvedRep);
           state.addScore(receipt.rewardXP);
-          window.showToast(`Report Approved. Block Anchored. (+${receipt.rewardXP} XP)`, 'success');
+          window.showToast(`Block Anchored. Reward distributed.`, 'success');
       } catch (err) {
-          window.showToast("Ledger sync interrupted. Retrying...", "warning");
+          window.showToast("Ledger sync interrupted.", "warning");
       }
-    } else {
+    } else if (action === 'reject') {
       state.rejectReport(id);
       window.showToast("Report rejected.", "info");
+    } else if (action === 'request-update') {
+      state.requestCitizenUpdate(id);
+      window.showToast("Follow-up request sent to reporter.", "success");
     }
-    
-    // State notify will trigger re-render
   }
 
   state.subscribe(render);

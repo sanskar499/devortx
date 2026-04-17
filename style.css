@@ -304,27 +304,32 @@ textarea.form-control { resize: vertical; min-height: 120px; }
 }
 .media-upload:hover { border-color: var(--accent-cyan); background: rgba(6, 182, 212, 0.05); }
 
-/* Queue Cards */
-.queue-container { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1.5rem; }
-.queue-card {
-  transition: transform 0.3s, opacity 0.3s;
-  position: relative;
-  overflow: hidden;
+/* Stale/Outdated Highlighting */
+.queue-card.stale {
+    border-top: 4px solid var(--accent-cyan);
+    animation: glowBorder 3s infinite;
 }
-.queue-card::before {
-  content: '';
-  position: absolute;
-  top: 0; left: 0; right: 0; height: 4px;
-  background: linear-gradient(to right, var(--hazard-orange), var(--danger-red));
+
+@keyframes glowBorder {
+    0%, 100% { border-top-color: var(--accent-cyan); }
+    50% { border-top-color: #0ea5e9; }
 }
-.card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem; }
-.ai-score {
-  background: rgba(0, 0, 0, 0.3); padding: 0.4rem 0.8rem; border-radius: 20px;
-  font-size: 0.85rem; font-weight: 700; color: var(--accent-cyan); border: 1px solid var(--accent-cyan);
+
+.status-badge {
+    padding: 0.25rem 0.6rem;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: 800;
+    text-transform: uppercase;
 }
-.card-body { margin-bottom: 1.5rem; font-size: 0.95rem; line-height: 1.5; color: var(--text-secondary); }
-.card-actions { display: flex; gap: 1rem; }
-.card-actions .btn { flex: 1; justify-content: center; }
+
+.stale-badge {
+    background: rgba(6, 182, 212, 0.15);
+    color: var(--accent-cyan);
+    border: 1px solid var(--accent-cyan);
+}
+
+.card-meta { margin-bottom: 1rem; }
 
 /* Overlay map styling */
 .leaflet-popup-content-wrapper { background: var(--bg-panel); color: #fff; backdrop-filter: blur(10px); border: 1px solid var(--glass-border); border-radius: 8px; }

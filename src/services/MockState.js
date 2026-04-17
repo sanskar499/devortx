@@ -87,17 +87,33 @@ class MockState {
 
   _startSimulation() {
     setInterval(() => {
-      const now = new Date().toLocaleTimeString();
+      const now = new Date();
+      const nowStr = now.toLocaleTimeString();
       const rain = Math.random() * 5 + 2;
       const risk = (rain * 1.5) + (this.getApprovedReports().length * 2) + (Math.random() * 5);
       
-      this.telemetry.rainfall.push({ x: now, y: rain });
-      this.telemetry.riskLevel.push({ x: now, y: risk });
+      this.telemetry.rainfall.push({ x: nowStr, y: rain });
+      this.telemetry.riskLevel.push({ x: nowStr, y: risk });
       
       if (this.telemetry.rainfall.length > 20) {
         this.telemetry.rainfall.shift();
         this.telemetry.riskLevel.shift();
       }
+      
+      // TIMELINE CHECK: 2 Minutes Threshold (Demo Mode)
+      const TIMEOUT_MS = 2 * 60 * 1000;
+      let checkTriggered = false;
+
+      this.reports.forEach(r => {
+        if (r.status === 'approved' && !r.requiresUpdate) {
+            const age = now - new Date(r.timestamp);
+            if (age > TIMEOUT_MS) {
+                r.requiresUpdate = true;
+                this.addLog(`System identifying stale data for incident ${r.id.substring(0,8)}. Requesting updated telemetry...`, 'warning');
+                checkTriggered = true;
+            }
+        }
+      });
       
       if (Math.random() > 0.8) {
         this.addLog(`AI Model verifying block ${Math.floor(Math.random() * 10000)}...`, 'info');
@@ -106,6 +122,14 @@ class MockState {
       this.notify();
     }, 3000);
   }
-}
+
+  requestCitizenUpdate(id) {
+    const r = this.reports.find(r => r.id === id);
+    if (r) {
+        r.updateRequested = true;
+        this.addLog(`Update request sent to citizen for report ${id.substring(0,8)}.`, 'info');
+        this.notify();
+    }
+  }
 
 export const state = new MockState();
