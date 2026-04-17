@@ -11,16 +11,22 @@ It empowers communities, authorities, and organizations to respond efficiently t
 🧠 Smart Decision Support – Data-backed planning and response
 🔐 Secure Data Handling – Ensures privacy and protection
 📱 Responsive Design – Seamless across all devices
+
 🛠️ Tech Stack
 Frontend
 React / Next.js
 Tailwind CSS
+
 Backend
 Node.js / Express
+
 Database
 MongoDB / PostgreSQL
+
 Deployment
 Vercel / Render
+
+
 📂 Project Structure
 resiligence/
 │── frontend/
@@ -31,14 +37,20 @@ resiligence/
 │── config/
 │── public/
 │── README.md
+
+
 ⚙️ Installation & Setup
+
 1. Clone the repository
 git clone https://github.com/sanskar499/devortx.git
 cd devortx
+
 2. Install dependencies
 npm install
+
 3. Run the project
 npm run dev
+
 🔑 Environment Variables
 
 Create a .env file in the root directory:
@@ -46,17 +58,21 @@ Create a .env file in the root directory:
 PORT=5000
 DATABASE_URL=your_database_url
 API_KEY=your_api_key
+
+
 🚀 Deployment
 Frontend: Vercel
 Backend: Render / Railway
 Full Stack: Docker / AWS
+
+
 🎯 Use Cases
 Flood monitoring and disaster response
 Smart city infrastructure tracking
 Emergency coordination systems
 Environmental risk analysis
-📸 Demo
 
+📸 Demo
 🔗 https://urban-resilience-network.vercel.app/
 
 🤝 Contributing
@@ -65,8 +81,9 @@ Create a new branch (feature/your-feature)
 Commit your changes
 Push to your branch
 Open a Pull Request
-📄 License
 
+
+📄 License
 This project is licensed under the MIT License.
 
 👨‍💻 Authors
