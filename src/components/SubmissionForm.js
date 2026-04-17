@@ -54,10 +54,20 @@ export function setupSubmissionForm(container) {
 
   gpsBtn.addEventListener('click', () => {
     locInput.value = "Acquiring satellite lock...";
+    
+    // Check for Secure Context (HTTPS requirement)
+    if (!window.isSecureContext && location.hostname !== 'localhost') {
+        window.showToast("GPS requires HTTPS. Using demo fallback location.", "info");
+        setMockLocation();
+        return;
+    }
+
     if (!navigator.geolocation) {
-      locInput.value = "Geolocation not supported";
+      locInput.value = "GPS Not Supported. Using Mock.";
+      setMockLocation();
       return;
     }
+
     navigator.geolocation.getCurrentPosition(
       (position) => {
         const lat = position.coords.latitude;
@@ -67,11 +77,22 @@ export function setupSubmissionForm(container) {
         checkValidity();
       },
       (error) => {
-        locInput.value = "Failed to access GPS. Check permissions.";
+        console.warn("GPS Error:", error);
+        window.showToast("GPS access denied or timed out. Using demo location.", "warning");
+        setMockLocation();
       },
-      { enableHighAccuracy: false, timeout: 15000, maximumAge: 10000 }
+      { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
     );
   });
+
+  function setMockLocation() {
+    // Default mock location (Flood prone city center - Mumbai example)
+    const mockLat = 19.0760 + (Math.random() * 0.01);
+    const mockLng = 72.8777 + (Math.random() * 0.01);
+    currentLocation = { lat: mockLat, lng: mockLng };
+    locInput.value = `📍 ${mockLat.toFixed(4)}, ${mockLng.toFixed(4)} (Simulated)`;
+    checkValidity();
+  }
 
   function checkValidity() {
     if (currentLocation && document.getElementById('desc-input').value.length > 5) {
