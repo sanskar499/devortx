@@ -74,11 +74,6 @@ export function setupModeratorQueue(container) {
     `;
   };
 
-    container.querySelectorAll('.action-btn').forEach(btn => {
-      btn.addEventListener('click', handleAction);
-    });
-  };
-
   async function handleAction(e) {
     const btn = e.target;
     const id = btn.getAttribute('data-id');
