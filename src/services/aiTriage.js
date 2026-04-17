@@ -1,27 +1,43 @@
 // Simulate Multi-Modal AI model analyzing a citizen report
 export async function runAITriage(reportData) {
   // Simulate network/inference latency
-  await new Promise(resolve => setTimeout(resolve, 2000));
+  await new Promise(resolve => setTimeout(resolve, 1500));
   
   const text = reportData.description.toLowerCase();
+  const ocr = (reportData.ocrText || "").toLowerCase();
+  
   let baseScore = 60;
+  let ocrMatched = false;
   
   // Keyword heuristics simulating NLP
-  if (text.includes('flood') || text.includes('water')) baseScore += 20;
-  if (text.includes('blocked') || text.includes('stuck') || text.includes('tree')) baseScore += 15;
-  if (text.includes('emergency') || text.includes('help')) baseScore += 10;
+  const keywords = ['flood', 'water', 'blocked', 'stuck', 'tree', 'emergency', 'help', 'danger', 'caution', 'closed'];
   
-  if (baseScore > 98) baseScore = 98;
+  keywords.forEach(kw => {
+    if (text.includes(kw)) baseScore += 10;
+    if (ocr.includes(kw)) {
+        baseScore += 15; // OCR hit is a stronger signal of physical evidence
+        ocrMatched = true;
+    }
+  });
+  
+  if (baseScore > 99) baseScore = 99;
   
   const isHighRelevance = baseScore > 75;
   
+  let analysis = isHighRelevance 
+    ? 'High correlation with sensor data. Likely inundation zone.'
+    : 'Moderate relevance. Requires ground validation.';
+
+  if (ocrMatched) {
+    analysis += ` [SYSTEM]: OCR corroborated textual evidence from image media.`;
+  }
+
   return {
-    confidence: baseScore + (Math.random() * 2), // e.g. 85.3
-    analysis: isHighRelevance 
-      ? 'High correlation with recent satellite radar and local rainfall data. Likely inundation zone.'
-      : 'Moderate relevance. No severe localized weather anomalies detected via satellite, requires local validation.',
+    confidence: baseScore + (Math.random() * 0.9),
+    analysis: analysis,
+    ocrEvidence: reportData.ocrText || 'No text detected',
     inferredTags: isHighRelevance ? ['Hazard', 'High Priority'] : ['Low Priority'],
-    suggestedAction: isHighRelevance ? 'Approve & Route to Emergency Responders' : 'Hold for more evidence',
-    coordinates: reportData.location // Passing through
+    suggestedAction: isHighRelevance ? 'Approve & Dispatch' : 'Awaiting Peer Review',
+    coordinates: reportData.location
   };
 }

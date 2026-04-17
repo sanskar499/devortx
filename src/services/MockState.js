@@ -131,5 +131,6 @@ class MockState {
         this.notify();
     }
   }
+}
 
 export const state = new MockState();

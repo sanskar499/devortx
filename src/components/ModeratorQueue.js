@@ -23,18 +23,28 @@ export function setupModeratorQueue(container) {
     container.innerHTML = items.map(report => {
       const isHighRisk = report.aiAnalysis && report.aiAnalysis.confidence > 80;
       const isStale = report.requiresUpdate;
+      const hasOCR = report.aiAnalysis && report.aiAnalysis.ocrEvidence && report.aiAnalysis.ocrEvidence !== 'No text detected';
       
       return `
-        <div class="queue-card glass-panel ${isHighRisk ? 'verified' : ''} ${isStale ? 'stale' : ''}">
+        <div class="queue-card glass-panel ${isHighRisk ? 'verified' : ''} ${isStale ? 'stale' : ''} ${hasOCR ? 'corroborated' : ''}">
           <div class="card-header">
             ${isStale ? '<span class="status-badge stale-badge">⚠️ UPDATE NEEDED (2H+)</span>' : `<span class="ai-score">AI Match: ${report.aiAnalysis.confidence.toFixed(1)}%</span>`}
+            ${hasOCR ? '<span class="status-badge ocr-badge">👁️ OCR VERIFIED</span>' : ''}
             <small>${new Date(report.timestamp).toLocaleTimeString()}</small>
           </div>
           <div class="card-body">
             <p><strong>Incident:</strong> "${report.description}"</p>
+            
             <div class="card-meta">
                 ${report.aiAnalysis ? `<span class="tag">${report.aiAnalysis.inferredTags.join('</span> <span class="tag">')}</span>` : ''}
             </div>
+
+            ${hasOCR ? `
+            <div class="ocr-evidence">
+                <strong>Raw OCR Evidence:</strong>
+                <pre>${report.aiAnalysis.ocrEvidence}</pre>
+            </div>` : ''}
+
             ${report.aiAnalysis ? `
             <div class="ai-insight">
                🤖 <i>${report.aiAnalysis.analysis}</i>

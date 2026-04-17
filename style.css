@@ -329,7 +329,32 @@ textarea.form-control { resize: vertical; min-height: 120px; }
     border: 1px solid var(--accent-cyan);
 }
 
-.card-meta { margin-bottom: 1rem; }
+.ocr-badge {
+    background: rgba(168, 85, 247, 0.15);
+    color: #a855f7;
+    border: 1px solid #a855f7;
+}
+
+.ocr-evidence {
+    background: rgba(0,0,0,0.3);
+    padding: 0.8rem;
+    border-radius: 6px;
+    margin: 1rem 0;
+    font-size: 0.85rem;
+    border-left: 3px solid #a855f7;
+}
+
+.ocr-evidence pre {
+    white-space: pre-wrap;
+    word-break: break-all;
+    margin-top: 0.4rem;
+    color: var(--text-secondary);
+    font-family: 'Courier New', Courier, monospace;
+}
+
+.queue-card.corroborated {
+    background: rgba(168, 85, 247, 0.05);
+}
 
 /* Overlay map styling */
 .leaflet-popup-content-wrapper { background: var(--bg-panel); color: #fff; backdrop-filter: blur(10px); border: 1px solid var(--glass-border); border-radius: 8px; }

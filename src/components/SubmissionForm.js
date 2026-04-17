@@ -1,7 +1,9 @@
+import Tesseract from 'tesseract.js';
 import { state } from '../services/MockState.js';
 import { runAITriage } from '../services/aiTriage.js';
 
 export function setupSubmissionForm(container) {
+  // ... (container.innerHTML remains largely the same)
   container.innerHTML = `
     <form id="submit-form">
       <div class="form-group">
@@ -9,8 +11,9 @@ export function setupSubmissionForm(container) {
         <div class="media-upload" id="mock-upload">
           <span class="icon">📁</span> Click to browse or drop file here
         </div>
-        <input type="file" id="file-input" class="hidden" accept="image/*, audio/*" />
+        <input type="file" id="file-input" class="hidden" accept="image/*" />
       </div>
+      <!-- ... (rest of form) -->
       <div class="form-group">
         <label>Description of Incident</label>
         <textarea id="desc-input" class="form-control" placeholder="E.g. The main road is completely flooded, water is thigh-deep..." required></textarea>
@@ -28,6 +31,7 @@ export function setupSubmissionForm(container) {
     </form>
   `;
 
+  // ... (event listeners)
   const form = document.getElementById('submit-form');
   const uploadArea = document.getElementById('mock-upload');
   const fileInput = document.getElementById('file-input');
@@ -36,26 +40,24 @@ export function setupSubmissionForm(container) {
   const submitBtn = document.getElementById('submit-btn');
 
   let currentLocation = null;
-  let hasFile = false;
+  let selectedFile = null;
 
   uploadArea.addEventListener('click', () => fileInput.click());
   fileInput.addEventListener('change', (e) => {
     if(e.target.files.length > 0) {
-      uploadArea.innerHTML = `<span style="color:var(--verified-green)">✓ ${e.target.files[0].name} attached</span>`;
+      selectedFile = e.target.files[0];
+      uploadArea.innerHTML = `<span style="color:var(--verified-green)">✓ ${selectedFile.name} attached</span>`;
       uploadArea.style.borderColor = 'var(--verified-green)';
-      hasFile = true;
       checkValidity();
     }
   });
 
   gpsBtn.addEventListener('click', () => {
     locInput.value = "Acquiring satellite lock...";
-    
     if (!navigator.geolocation) {
       locInput.value = "Geolocation not supported";
       return;
     }
-
     navigator.geolocation.getCurrentPosition(
       (position) => {
         const lat = position.coords.latitude;
@@ -65,12 +67,7 @@ export function setupSubmissionForm(container) {
         checkValidity();
       },
       (error) => {
-        console.error("Error getting location: ", error);
-        if (window.isSecureContext === false) {
-           locInput.value = "GPS requires HTTPS (or localhost) to work.";
-        } else {
-           locInput.value = "Failed to access GPS. Check permissions/timeout.";
-        }
+        locInput.value = "Failed to access GPS. Check permissions.";
       },
       { enableHighAccuracy: false, timeout: 15000, maximumAge: 10000 }
     );
@@ -88,29 +85,44 @@ export function setupSubmissionForm(container) {
 
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
-    submitBtn.textContent = 'AI Triaging Model...';
     submitBtn.disabled = true;
+
+    let ocrText = '';
+    
+    // OCR Extraction if image exists
+    if (selectedFile) {
+        submitBtn.textContent = 'OCR Engine: Reading Image...';
+        try {
+            const { data: { text } } = await Tesseract.recognize(selectedFile, 'eng');
+            ocrText = text;
+        } catch (err) {
+            console.error("OCR Failed:", err);
+        }
+    }
+
+    submitBtn.textContent = 'AI Multi-modal Triage...';
 
     const reportData = {
       description: document.getElementById('desc-input').value,
       location: currentLocation,
-      hasMedia: hasFile
+      hasMedia: !!selectedFile,
+      ocrText: ocrText
     };
 
     // Run AI Triage
     const aiResult = await runAITriage(reportData);
-    
     reportData.aiAnalysis = aiResult;
     
     // Add to state
     state.addReport(reportData);
     
-    window.showToast("Report submitted successfully. AI triaged and sent to moderator queue.", "success");
+    window.showToast("Report submitted successfully. AI triaged with OCR verification.", "success");
     
     // Reset
     form.reset();
     uploadArea.innerHTML = `<span class="icon">📁</span> Click to browse or drop file here`;
     uploadArea.style.borderColor = '';
+    selectedFile = null;
     currentLocation = null;
     submitBtn.textContent = 'Submit to Network';
     submitBtn.disabled = true;
