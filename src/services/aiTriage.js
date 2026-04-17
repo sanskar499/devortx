@@ -29,13 +29,13 @@ export async function runAITriage(reportData) {
     : 'Moderate relevance. Requires ground validation.';
 
   if (ocrMatched) {
-    analysis += ` [SYSTEM]: OCR corroborated textual evidence from image media.`;
+    analysis = `✔️ [MULTI-MODAL VERIFIED]: OCR corroborated physical textual evidence from the uploaded media. ${analysis}`;
   }
 
   return {
     confidence: baseScore + (Math.random() * 0.9),
     analysis: analysis,
-    ocrEvidence: reportData.ocrText || 'No text detected',
+    ocrEvidence: reportData.ocrText || '',
     inferredTags: isHighRelevance ? ['Hazard', 'High Priority'] : ['Low Priority'],
     suggestedAction: isHighRelevance ? 'Approve & Dispatch' : 'Awaiting Peer Review',
     coordinates: reportData.location

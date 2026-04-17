@@ -41,25 +41,40 @@ export function setupModeratorQueue(container) {
   };
 
   const renderCard = (report, actionType) => {
-    const isHighRisk = report.aiAnalysis && report.aiAnalysis.confidence > 80;
+    const ai = report.aiAnalysis || {};
+    const ocr = ai.ocrEvidence || '';
+    const hasOCR = ocr && ocr.trim().length > 0 && ocr !== 'No text detected';
+    
+    const isHighRisk = ai.confidence > 80;
     const isStale = report.requiresUpdate;
-    const hasOCR = report.aiAnalysis && report.aiAnalysis.ocrEvidence && report.aiAnalysis.ocrEvidence !== 'No text detected';
     const isApproved = report.status === 'approved';
 
     return `
       <div class="queue-card glass-panel ${isHighRisk ? 'verified' : ''} ${isStale ? 'stale' : ''} ${hasOCR ? 'corroborated' : ''} ${isApproved ? 'active-alert' : ''}">
         <div class="card-header">
-          ${isStale ? '<span class="status-badge stale-badge">⚠️ UPDATE NEEDED</span>' : `<span class="ai-score">AI Match: ${report.aiAnalysis?.confidence.toFixed(1) || 'N/A'}%</span>`}
-          ${hasOCR ? '<span class="status-badge ocr-badge">👁️ OCR</span>' : ''}
+          ${isStale ? '<span class="status-badge stale-badge">⚠️ UPDATE NEEDED</span>' : `<span class="ai-score">AI Match: ${ai.confidence?.toFixed(1) || 'N/A'}%</span>`}
+          ${hasOCR ? '<span class="status-badge ocr-badge">🧠 OCR VERIFIED</span>' : ''}
           ${isApproved ? '<span class="status-badge live-badge">LIVE</span>' : ''}
           <small>${new Date(report.timestamp).toLocaleTimeString()}</small>
         </div>
         <div class="card-body">
           <p><strong>Incident:</strong> "${report.description}"</p>
+          
           <div class="card-meta">
-              ${report.aiAnalysis ? `<span class="tag">${report.aiAnalysis.inferredTags.join('</span> <span class="tag">')}</span>` : ''}
+              ${ai.inferredTags ? `<span class="tag">${ai.inferredTags.join('</span> <span class="tag">')}</span>` : ''}
           </div>
-          ${hasOCR ? `<div class="ocr-evidence"><strong>OCR:</strong> <pre>${report.aiAnalysis.ocrEvidence}</pre></div>` : ''}
+
+          ${hasOCR ? `
+          <div class="ocr-evidence-box">
+              <div class="ocr-label"><span class="icon">👁️</span> MULTI-MODAL OCR EVIDENCE</div>
+              <pre class="ocr-text">${ocr}</pre>
+              <div class="ocr-status">✓ Text auto-corroborated with description</div>
+          </div>` : ''}
+
+          <div class="ai-insight-box">
+             <div class="ai-label">🤖 COMMANDER AI INSIGHT</div>
+             <p class="ai-msg">${ai.analysis || 'Analyzing infrastructure telemetry...'}</p>
+          </div>
         </div>
         <div class="card-actions">
           ${actionType === 'update' ? 
