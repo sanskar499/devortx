@@ -21,12 +21,10 @@ export class FloodSim {
         // Initialize cells from trigger points (approved reports)
         points.forEach(p => {
             const key = this._getPosKey(p.lat, p.lng);
-            // Randomly choose a road axis for this seed point
-            const axis = Math.random() > 0.5 ? 'lat' : 'lng';
-            // Store origin to manage area-based capping
+            // Radial origin seed
             this.cells.set(key, { 
                 lat: p.lat, lng: p.lng, 
-                level: 1.0, axis, 
+                level: 1.0, 
                 origin: { lat: p.lat, lng: p.lng } 
             });
         });
@@ -53,28 +51,24 @@ export class FloodSim {
     }
 
     _loop() {
-        // Cap iterations to keep simulation localized
-        if (!this.active || this.iteration > 25) return;
+        if (!this.active || this.iteration > 20) return;
         
         this.iteration++;
         const nextCells = new Map(this.cells);
-        const MAX_SPREAD_DEG = 0.02; // Approx 2.2km capping
+        const MAX_SPREAD_DEG = 0.012; // Approx 1.3km capping for circular logic
 
-        // Spread logic
         this.cells.forEach((cell, key) => {
-            if (cell.level < 0.15) return;
+            if (cell.level < 0.2) return;
 
-            const neighbors = [];
-            if (cell.axis === 'lat') {
-                neighbors.push({ lat: cell.lat + this.gridSize, lng: cell.lng, axis: 'lat' });
-                neighbors.push({ lat: cell.lat - this.gridSize, lng: cell.lng, axis: 'lat' });
-            } else {
-                neighbors.push({ lat: cell.lat, lng: cell.lng + this.gridSize, axis: 'lng' });
-                neighbors.push({ lat: cell.lat, lng: cell.lng - this.gridSize, axis: 'lng' });
-            }
+            // Full 4-way radial spread (removes 'line' behavior)
+            const neighbors = [
+                { lat: cell.lat + this.gridSize, lng: cell.lng },
+                { lat: cell.lat - this.gridSize, lng: cell.lng },
+                { lat: cell.lat, lng: cell.lng + this.gridSize },
+                { lat: cell.lat, lng: cell.lng - this.gridSize }
+            ];
 
             neighbors.forEach(n => {
-                // Distance capping logic
                 const distLat = Math.abs(n.lat - cell.origin.lat);
                 const distLng = Math.abs(n.lng - cell.origin.lng);
                 
@@ -84,18 +78,17 @@ export class FloodSim {
                 const current = nextCells.get(nKey) || { 
                     lat: n.lat, lng: n.lng, 
                     level: 0, 
-                    axis: n.axis, 
                     origin: cell.origin 
                 };
                 
-                // Spread water with decay
-                const flow = cell.level * (0.55 - (this.iteration * 0.01));
+                // Spread water
+                const flow = cell.level * (0.45 - (this.iteration * 0.015));
                 current.level = Math.min(1.0, current.level + flow);
                 nextCells.set(nKey, current);
             });
 
-            // Evaporation / Saturation decay
-            cell.level *= 0.85;
+            // Fast dissipation to keep it circular/clumpy
+            cell.level *= 0.75;
             nextCells.set(key, cell);
         });
 
@@ -110,17 +103,17 @@ export class FloodSim {
         this.layer.clearLayers();
 
         this.cells.forEach(cell => {
-            if (cell.level < 0.15) return;
+            if (cell.level < 0.2) return;
 
-            // Use circular heat-map type rendering
+            // Render as circular heat points
             const color = cell.level > 0.8 ? '#06b6d4' : '#3b82f6';
-            const radius = (this.gridSize * 150000) * (cell.level * 0.9); // Dynamic visual radius
+            const radius = (this.gridSize * 160000) * (cell.level * 0.95);
 
             L.circle([cell.lat, cell.lng], {
                 radius: radius,
                 stroke: false,
                 fillColor: color,
-                fillOpacity: cell.level * 0.35,
+                fillOpacity: cell.level * 0.4,
                 interactive: false
             }).addTo(this.layer);
         });
