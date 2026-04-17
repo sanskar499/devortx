@@ -131,6 +131,15 @@ class MockState {
         this.notify();
     }
   }
+
+  removeReport(id) {
+    const r = this.reports.find(r => r.id === id);
+    if (r) {
+      r.status = 'removed';
+      this.addLog(`Incident ${id.substring(0, 8)} removed from active ledger by Admin.`, 'danger');
+      this.notify();
+    }
+  }
 }
 
 export const state = new MockState();

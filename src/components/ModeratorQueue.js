@@ -7,59 +7,72 @@ export function setupModeratorQueue(container) {
   const render = () => {
     const pending = state.getPendingReports();
     const needsUpdate = state.reports.filter(r => r.requiresUpdate && !r.updateRequested);
+    const approved = state.getApprovedReports();
     
-    if (pending.length === 0 && needsUpdate.length === 0) {
+    if (pending.length === 0 && needsUpdate.length === 0 && approved.length === 0) {
       container.innerHTML = `
         <div class="empty-state glass-panel">
             <span class="icon">✅</span>
-            <p>The queue is empty. All safe!</p>
+            <p>The network is clear. No active alerts.</p>
         </div>
       `;
       return;
     }
 
-    const items = [...pending, ...needsUpdate];
+    const sections = [
+        { title: '🛡️ Pending Verification', items: pending, action: 'triage' },
+        { title: '⚠️ Stale Data - Follow Up', items: needsUpdate, action: 'update' },
+        { title: '✅ Active Live Alerts', items: approved, action: 'manage' }
+    ];
 
-    container.innerHTML = items.map(report => {
-      const isHighRisk = report.aiAnalysis && report.aiAnalysis.confidence > 80;
-      const isStale = report.requiresUpdate;
-      const hasOCR = report.aiAnalysis && report.aiAnalysis.ocrEvidence && report.aiAnalysis.ocrEvidence !== 'No text detected';
-      
-      return `
-        <div class="queue-card glass-panel ${isHighRisk ? 'verified' : ''} ${isStale ? 'stale' : ''} ${hasOCR ? 'corroborated' : ''}">
-          <div class="card-header">
-            ${isStale ? '<span class="status-badge stale-badge">⚠️ UPDATE NEEDED (2H+)</span>' : `<span class="ai-score">AI Match: ${report.aiAnalysis.confidence.toFixed(1)}%</span>`}
-            ${hasOCR ? '<span class="status-badge ocr-badge">👁️ OCR VERIFIED</span>' : ''}
-            <small>${new Date(report.timestamp).toLocaleTimeString()}</small>
-          </div>
-          <div class="card-body">
-            <p><strong>Incident:</strong> "${report.description}"</p>
-            
-            <div class="card-meta">
-                ${report.aiAnalysis ? `<span class="tag">${report.aiAnalysis.inferredTags.join('</span> <span class="tag">')}</span>` : ''}
+    container.innerHTML = sections.map(sec => {
+        if (sec.items.length === 0) return '';
+        return `
+            <h3 class="queue-section-title">${sec.title}</h3>
+            <div class="queue-grid">
+                ${sec.items.map(report => renderCard(report, sec.action)).join('')}
             </div>
-
-            ${hasOCR ? `
-            <div class="ocr-evidence">
-                <strong>Raw OCR Evidence:</strong>
-                <pre>${report.aiAnalysis.ocrEvidence}</pre>
-            </div>` : ''}
-
-            ${report.aiAnalysis ? `
-            <div class="ai-insight">
-               🤖 <i>${report.aiAnalysis.analysis}</i>
-            </div>` : ''}
-          </div>
-          <div class="card-actions">
-            ${isStale ? 
-                `<button class="btn btn-primary action-btn" data-id="${report.id}" data-action="request-update">Request Citizen Update</button>` :
-                `<button class="btn btn-success action-btn" data-id="${report.id}" data-action="approve">✓ Approve</button>
-                 <button class="btn btn-danger action-btn" data-id="${report.id}" data-action="reject">✗ Drop</button>`
-            }
-          </div>
-        </div>
-      `;
+        `;
     }).join('');
+
+    container.querySelectorAll('.action-btn').forEach(btn => {
+      btn.addEventListener('click', handleAction);
+    });
+  };
+
+  const renderCard = (report, actionType) => {
+    const isHighRisk = report.aiAnalysis && report.aiAnalysis.confidence > 80;
+    const isStale = report.requiresUpdate;
+    const hasOCR = report.aiAnalysis && report.aiAnalysis.ocrEvidence && report.aiAnalysis.ocrEvidence !== 'No text detected';
+    const isApproved = report.status === 'approved';
+
+    return `
+      <div class="queue-card glass-panel ${isHighRisk ? 'verified' : ''} ${isStale ? 'stale' : ''} ${hasOCR ? 'corroborated' : ''} ${isApproved ? 'active-alert' : ''}">
+        <div class="card-header">
+          ${isStale ? '<span class="status-badge stale-badge">⚠️ UPDATE NEEDED</span>' : `<span class="ai-score">AI Match: ${report.aiAnalysis?.confidence.toFixed(1) || 'N/A'}%</span>`}
+          ${hasOCR ? '<span class="status-badge ocr-badge">👁️ OCR</span>' : ''}
+          ${isApproved ? '<span class="status-badge live-badge">LIVE</span>' : ''}
+          <small>${new Date(report.timestamp).toLocaleTimeString()}</small>
+        </div>
+        <div class="card-body">
+          <p><strong>Incident:</strong> "${report.description}"</p>
+          <div class="card-meta">
+              ${report.aiAnalysis ? `<span class="tag">${report.aiAnalysis.inferredTags.join('</span> <span class="tag">')}</span>` : ''}
+          </div>
+          ${hasOCR ? `<div class="ocr-evidence"><strong>OCR:</strong> <pre>${report.aiAnalysis.ocrEvidence}</pre></div>` : ''}
+        </div>
+        <div class="card-actions">
+          ${actionType === 'update' ? 
+              `<button class="btn btn-primary action-btn" data-id="${report.id}" data-action="request-update">Request Update</button>` :
+            actionType === 'manage' ?
+              `<button class="btn btn-danger action-btn" data-id="${report.id}" data-action="remove">❌ Remove from Live Map</button>` :
+              `<button class="btn btn-success action-btn" data-id="${report.id}" data-action="approve">✓ Approve</button>
+               <button class="btn btn-danger action-btn" data-id="${report.id}" data-action="reject">✗ Drop</button>`
+          }
+        </div>
+      </div>
+    `;
+  };
 
     container.querySelectorAll('.action-btn').forEach(btn => {
       btn.addEventListener('click', handleAction);
@@ -91,6 +104,9 @@ export function setupModeratorQueue(container) {
     } else if (action === 'request-update') {
       state.requestCitizenUpdate(id);
       window.showToast("Follow-up request sent to reporter.", "success");
+    } else if (action === 'remove') {
+      state.removeReport(id);
+      window.showToast("Incident recalled. Map updated.", "danger");
     }
   }
 

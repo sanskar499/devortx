@@ -56,10 +56,19 @@ function renderMarkers(currentState) {
   if (!mapInstance) return;
 
   const approvedList = currentState.getApprovedReports();
+  const approvedIds = approvedList.map(r => r.id);
+
+  // 1. Remove markers that are no longer approved
+  Object.keys(markers).forEach(id => {
+    if (!approvedIds.includes(id)) {
+        mapInstance.removeLayer(markers[id]);
+        delete markers[id];
+        lastApprovedCount = Math.max(0, lastApprovedCount - 1);
+    }
+  });
   
-  // Logic to automatically trigger flood simulation on new approvals
+  // 2. Logic to automatically trigger flood simulation on new approvals
   if (approvedList.length > lastApprovedCount) {
-    const newReports = approvedList.slice(lastApprovedCount);
     floodSim.start(approvedList.map(r => r.location)); // Update simulation with all current risk zones
     lastApprovedCount = approvedList.length;
     
@@ -68,13 +77,15 @@ function renderMarkers(currentState) {
     mapInstance.flyTo(latest.location, 14);
   }
 
+  // 3. Add new markers
   approvedList.forEach(report => {
     if (!markers[report.id]) {
+        // ... (rest of marker creation code)
       const { lat, lng } = report.location;
       
       const customIcon = L.divIcon({
         className: 'custom-icon',
-        html: `<div class="marker-glowing ${report.aiAnalysis.confidence > 80 ? 'high-risk' : ''}" style="background-color: var(--verified-green); width: 14px; height: 14px; border-radius: 50%; box-shadow: 0 0 10px var(--verified-green); border: 2px solid #fff;"></div>`
+        html: `<div class="marker-glowing ${report.aiAnalysis?.confidence > 80 ? 'high-risk' : ''}" style="background-color: var(--verified-green); width: 14px; height: 14px; border-radius: 50%; box-shadow: 0 0 10px var(--verified-green); border: 2px solid #fff;"></div>`
       });
 
       const marker = L.marker([lat, lng], { icon: customIcon }).addTo(mapInstance);
@@ -83,7 +94,7 @@ function renderMarkers(currentState) {
             <strong>Verified Record</strong><br>
             <small>${new Date(report.timestamp).toLocaleString()}</small>
             <p>${report.description}</p>
-            <div class="ai-badge">${report.aiAnalysis.confidence.toFixed(1)}% AI Verification</div>
+            <div class="ai-badge">${report.aiAnalysis?.confidence.toFixed(1) || 'N/A'}% AI Verification</div>
         </div>
       `);
       
